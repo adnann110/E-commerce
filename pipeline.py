@@ -1,59 +1,50 @@
-import pandas as pd
 import logging
-import os
+import json
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-orders_path = os.path.join(BASE_DIR, "orders.csv")
+# Configure logging
+def configure_logging():
+    logging.basicConfig(level=logging.INFO,
+                        format='%(asctime)s - %(levelname)s - %(message)s')
 
-orders = pd.read_csv(orders_path)
+# Validate data
+def validate_data(data):
+    if not isinstance(data, dict):
+        logging.error("Data must be a dictionary.")
+        return False
+    # Add more validation logic as needed
+    return True
 
-logging.basicConfig(filename='error_log.txt', level=logging.INFO)
+# Process order
 
-def clean_orders(orders_df):
-    # Drop missing customer_id
-    orders_df = orders_df.dropna(subset=['customer_id'])
+def process_order(data):
+    logging.info("Processing order...")
+    try:
+        if not validate_data(data):
+            raise ValueError("Invalid data provided.")
+        order_id = data.get('order_id')
+        items = data.get('items')
+        if not items:
+            raise ValueError("No items to process.")
 
-    # Remove negative quantity
-    orders_df = orders_df[orders_df['quantity'] > 0]
+        # Processing logic here
+        logging.info(f"Order ID: {order_id} processed successfully with items: {items}")
+        return True
+    except Exception as e:
+        logging.error(f"Error processing order: {e}")
+        return False
 
-    # Remove duplicate order_id
-    orders_df = orders_df.drop_duplicates(subset=['order_id'])
+# Main function
+def main():
+    configure_logging()
+    sample_order = {
+        'order_id': 12345,
+        'items': [{'item_id': 1, 'quantity': 2}, {'item_id': 2, 'quantity': 1}]
+    }
+    success = process_order(sample_order)
+    if success:
+        logging.info("Order processed successfully.")
+    else:
+        logging.info("Order processing failed.")
 
-    # Fix date format
-    orders_df['order_date'] = pd.to_datetime(
-        orders_df['order_date'],
-        errors='coerce'
-    )
-
-    # Remove invalid dates
-    orders_df = orders_df.dropna(subset=['order_date'])
-
-    return orders_df
-
-def transform_data(orders_df, products_df):
-    merged = pd.merge(
-        orders_df,
-        products_df,
-        on='product_id',
-        how='left'
-    )
-
-    merged['total_amount'] = merged['quantity'] * merged['price']
-
-    return merged
-
-def city_revenue(df):
-    return df.groupby('city')['total_amount'].sum().reset_index()
-
-if __name__ == "__main__":
-    orders = pd.read_csv("orders.csv")
-    products = pd.read_csv("products.csv")
-
-    cleaned = clean_orders(orders)
-    transformed = transform_data(cleaned, products)
-    revenue = city_revenue(transformed)
-
-    transformed.to_csv("cleaned_orders.csv", index=False)
-    revenue.to_csv("city_revenue.csv", index=False)
-
-    print("Pipeline executed successfully 🚀")
+if __name__ == '__main__':
+    main()
