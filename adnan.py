@@ -1,0 +1,2 @@
+print("adnan")
+print("ali")
